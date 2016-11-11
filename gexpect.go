@@ -117,7 +117,7 @@ func (buf *buffer) PutBack(chunk []byte) {
 }
 
 func SpawnAtDirectory(command string, directory string) (*ExpectSubprocess, error) {
-	expect, err := _spawn(command)
+	expect, err := _spawn(command, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func SpawnAtDirectory(command string, directory string) (*ExpectSubprocess, erro
 }
 
 func Command(command string) (*ExpectSubprocess, error) {
-	expect, err := _spawn(command)
+	expect, err := _spawn(command, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -138,8 +138,16 @@ func (expect *ExpectSubprocess) Start() error {
 	return err
 }
 
+func SpawnWithEnv(command string, env []string) (*ExpectSubprocess, error) {
+	expect, err := _spawn(command, env)
+	if err != nil {
+		return nil, err
+	}
+	return _start(expect)
+}
+
 func Spawn(command string) (*ExpectSubprocess, error) {
-	expect, err := _spawn(command)
+	expect, err := _spawn(command, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +395,7 @@ func (expect *ExpectSubprocess) ReadUntil(delim byte) ([]byte, error) {
 		for i := 0; i < n; i++ {
 			if chunk[i] == delim {
 				if len(chunk) > i+1 {
-					expect.buf.PutBack(chunk[i+1:n])
+					expect.buf.PutBack(chunk[i+1 : n])
 				}
 				return join, nil
 			} else {
@@ -420,7 +428,7 @@ func _start(expect *ExpectSubprocess) (*ExpectSubprocess, error) {
 	return expect, nil
 }
 
-func _spawn(command string) (*ExpectSubprocess, error) {
+func _spawn(command string, env []string) (*ExpectSubprocess, error) {
 	wrapper := new(ExpectSubprocess)
 
 	wrapper.outputBuffer = nil
@@ -442,6 +450,9 @@ func _spawn(command string) (*ExpectSubprocess, error) {
 		wrapper.Cmd = exec.Command(path, splitArgs[1:]...)
 	} else {
 		wrapper.Cmd = exec.Command(path)
+	}
+	if len(env) > 0 {
+		wrapper.Cmd.Env = env
 	}
 	wrapper.buf = new(buffer)
 
